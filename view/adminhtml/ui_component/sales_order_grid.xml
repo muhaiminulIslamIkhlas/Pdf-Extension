@@ -1,20 +1,15 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
+<!-- Add the column "custom_column" (Custom Column) to the sales invoice grid. -->
 <listing xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Ui:etc/ui_configuration.xsd">
     <listingToolbar name="listing_top">
-            <massaction name="listing_massaction">
-                <action name="order_delete">
-                    <argument name="data" xsi:type="array">
-                        <item name="config" xsi:type="array">
-                            <item name="type" xsi:type="string">order_delete</item>
-                            <item name="label" xsi:type="string" translate="true">Muhaimin</item>
-                            <item name="url" xsi:type="url" path="pdfm/"/>
-                            <item name="confirm" xsi:type="array">
-                                <item name="title" xsi:type="string" translate="true">Pdf</item>
-                                <item name="message" xsi:type="string" translate="true">Are you sure you wan\'t to generate invoice for selected items?</item>
-                            </item>
-                        </item>
-                    </argument>
-                </action>
-            </massaction>
+        <massaction name="listing_massaction">
+            <action name="mass_export_mycsv">
+                <settings>
+                    <url path="pdfm/Index/Index"/>
+                    <type>mass_export_mycsv</type>
+                    <label translate="true">Export PDF for Order</label>
+                </settings>
+            </action>
+        </massaction>
     </listingToolbar>
 </listing>
