@@ -29,19 +29,51 @@ class Index extends \Magento\Sales\Controller\Adminhtml\Order\AbstractMassAction
         $this->messageManager = $messageManager;
         $this->magentoOrder = $magentoOrder;
     }
-
+    public function getItemOptions($item)
+    {
+        $result = [];
+        $options = $item->getProductOptions();
+        if ($options) {             
+            if (isset($options['attributes_info'])) {
+                $result = array_merge($result, $options['attributes_info']);
+            }
+            if (isset($options['options'])) {
+                $result = array_merge($result, $options['options']);
+            }
+            if (isset($options['additional_options'])) {
+                $result = array_merge($result, $options['additional_options']);
+            }
+        }
+        return $result;
+    }
     public function pdfGenerate($id) {
         $orders = $this->magentoOrder->load($id);
         $shippingaddress = $orders->getShippingAddress()->getData();
-        $orderItems = $orders->getAllItems();
+        $orderItems = $orders->getAllVisibleItems();
         $orderId = $orders->getRealOrderId();
         // $orderDate=date("M d Y", $orders->getCreatedAt());
         $time = strtotime($orders->getCreatedAt());
         $orderDate = date("M d, Y", $time);
 
         $product = '';
-        foreach ($orderItems as $item) {
-            $product .= '<tr>' . '<td>' . $item->getName() . '</td>' . '<td>' . $item->getSku() . '</td>' . '<td>' . $item->getQtyOrdered() . '</td></tr>';
+         foreach ($orderItems as $item) {
+            $optionhtml = '';
+            $options = $this->getItemOptions($item);
+            if(!empty($options)){
+                $optionhtml = '<div class="item-options">';
+            foreach ($options as $option) {
+                 $optionhtml .= '<div class="option">';
+                $optionhtml .= '<span>'.$option['label'].' :</span>';
+                $optionhtml .= '<strong> '.  nl2br($option['value']).'</strong>';
+                $optionhtml .= '</div>';
+            }
+            $optionhtml .= '</div>';
+                
+            }
+            
+            
+            
+            $product .= '<tr>' . '<td>' . $item->getName() .$optionhtml. '</td>' . '<td>' . $item->getSku() . '</td>' . '<td>' . round($item->getQtyOrdered()) . '</td></tr>';
         }
         $generator = new \Picqer\Barcode\BarcodeGeneratorHTML();
         $barcode = $generator->getBarcode('FMT-00219', $generator::TYPE_CODE_128);
@@ -145,7 +177,7 @@ E: ' . $shippingaddress['email'] . '<br />
 </body>
 </html>
 ';
-
+//echo $html;exit;
         return $html;
 
     }
@@ -167,7 +199,7 @@ E: ' . $shippingaddress['email'] . '<br />
             'margin_top' => 0,
             'margin_bottom' => 15,
             'margin_header' => 0,
-            'margin_footer' => 5,
+            'margin_footer' => 26,
             'showBarcodeNumbers' => FALSE
         ]);
         $count=count($data);
@@ -184,14 +216,15 @@ E: ' . $shippingaddress['email'] . '<br />
  //       $mpdf->WriteHTML($html);
 //        $filename = 'var/export/' . date("Y-m-d-H-i-s") . '_order_id_' . $orderId . '.pdf';
         $filename = '' . date("Y-m-d-H-i-s") . '_order_id_.pdf';
+//        $this->messageManager->addSuccess('Invoice downloaded.');
         return $mpdf->Output($filename, 'D');
-        $this->messageManager->addSuccess('Invoice generated for order #' . $orderId . ' ');
+        
         
         
 
-        $resultRedirect = $this->resultRedirectFactory->create();
-        $resultRedirect->setPath('sales/order/index');
-        return $resultRedirect;
+//        $resultRedirect = $this->resultRedirectFactory->create();
+//        $resultRedirect->setPath('sales/order/index');
+//        return $resultRedirect;
     }
 
 }
