@@ -31,21 +31,20 @@ class Index extends \Magento\Sales\Controller\Adminhtml\Order\AbstractMassAction
     }
 
     public function pdfGenerate($id) {
-
-        $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-        $orders=$this->magentoOrder->load($id);
+        $orders = $this->magentoOrder->load($id);
         $shippingaddress = $orders->getShippingAddress()->getData();
         $orderItems = $orders->getAllItems();
         $orderId = $orders->getRealOrderId();
+        // $orderDate=date("M d Y", $orders->getCreatedAt());
+        $time = strtotime($orders->getCreatedAt());
+        $orderDate = date("M d, Y", $time);
 
         $product = '';
         foreach ($orderItems as $item) {
             $product .= '<tr>' . '<td>' . $item->getName() . '</td>' . '<td>' . $item->getSku() . '</td>' . '<td>' . $item->getQtyOrdered() . '</td></tr>';
         }
-
         $generator = new \Picqer\Barcode\BarcodeGeneratorHTML();
         $barcode = $generator->getBarcode('FMT-00219', $generator::TYPE_CODE_128);
-
         $html = '
 <html>
 <head>
@@ -92,7 +91,7 @@ table tfoot td {
 
 
 <div style="font-size: 16px; padding: 0 !important;">
-<div class="barcodecell" style="text-align:left"><barcode code="FMT-00219" type="C128A" class="barcode" /></div>
+<div class="barcodecell" style="text-align:left"><barcode code="'.$orderId.'" type="C128B" class="barcode" /></div>
 <div style="padding: 5px 0 0 15px">' . $shippingaddress['firstname'] . " " . $shippingaddress['lastname'] . '</div>
 <div style="padding-left: 15px">' . $shippingaddress['company'] . '</div>
 <div style="padding-left: 15px">' . $shippingaddress['street'] . '</div>
@@ -102,7 +101,7 @@ table tfoot td {
 </htmlpagefooter>
 <sethtmlpagefooter name="myfooter" value="on" />
 
-<div class="barcodecell" style="text-align:right;padding-bottom:10px;"><barcode code="FMT-00219" type="C128A" class="barcode" /></div>
+<div class="barcodecell" style="text-align:right;padding-bottom:10px;"><barcode code="'.$orderId.'" type="C128B" class="barcode" /></div>
 <table class="header" width="100%" cellpadding="0" border="0">
 <tr>
 <td><img src="https://d3sq1kbqw5tk5l.cloudfront.net/logo/websites/8/maidpro-logo.jpg" ></td>
@@ -114,10 +113,10 @@ sales@darterpress.com
 </td>
 </tr>
 </table>
-<h2 style="border-top:3px solid #000000; border-bottom:1px solid #000000;padding:5px 0; ">
-<span style="display:inline-block;margin-right:30px">Order: #' . $orderId . '</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span >Order Date: May 8, 2020</span>
+<h2 style="border-top:3px solid #000000; border-bottom:1px solid #000000;padding:5px 0;margin:2 ">
+<span style="display:inline-block;margin-right:30px">Order: #' . $orderId . '</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span >Order Date: ' . $orderDate . '</span>
 </h2>
-<div style="padding-left:30px;padding-bottom:15px;">
+<div style="padding-left:30px;">
 ' . $shippingaddress['firstname'] . " " . $shippingaddress['lastname'] . '<br />
 ' . $shippingaddress['company'] . '<br />
 ' . $shippingaddress['street'] . '<br />
@@ -147,34 +146,52 @@ E: ' . $shippingaddress['email'] . '<br />
 </html>
 ';
 
-        $mpdf = new \Mpdf\Mpdf([
-            'margin_left' => 15,
-            'margin_right' => 15,
-            'margin_top' => 0,
-            'margin_bottom' => 25,
-            'margin_header' => 0,
-            'margin_footer' => 10,
-            'showBarcodeNumbers' => FALSE
-        ]);
+        return $html;
 
-        $mpdf->WriteHTML($html);
-        $filename = 'var/export/' . uniqid() . '_order_id_' . $orderId . '.pdf';
-        $mpdf->Output($filename, 'F');
-        $this->messageManager->addSuccess('Invoice generated for order #' . $orderId . ' ');
     }
 
     protected function massAction(AbstractCollection $collection) {
         $orderIds = $collection->getAllIds(); // Get the selected orders
-         foreach($orderIds as $id){
-          $this->pdfGenerate($id);
-          } 
-        $resultRedirect = $this->resultRedirectFactory->create();
-                
-        $resultRedirect->setPath('http://myshop.dev/admin/sales/order/');
-                
-        return $resultRedirect;
+        $data=array();
+        foreach ($orderIds as $id) {
+            $data[]=$this->pdfGenerate($id);
+        }
+        
+        
+        
+        
+        
+        $mpdf = new \Mpdf\Mpdf([
+            'margin_left' => 15,
+            'margin_right' => 15,
+            'margin_top' => 0,
+            'margin_bottom' => 15,
+            'margin_header' => 0,
+            'margin_footer' => 5,
+            'showBarcodeNumbers' => FALSE
+        ]);
+        $count=count($data);
+        $i=1;
+        foreach($data as $item){
+            $mpdf->WriteHTML($item);
+            if($i!=$count){
+                $mpdf->AddPage();
+            }
+            $i=$i+1;
+            
+        }
 
-     
+ //       $mpdf->WriteHTML($html);
+//        $filename = 'var/export/' . date("Y-m-d-H-i-s") . '_order_id_' . $orderId . '.pdf';
+        $filename = '' . date("Y-m-d-H-i-s") . '_order_id_.pdf';
+        return $mpdf->Output($filename, 'D');
+        $this->messageManager->addSuccess('Invoice generated for order #' . $orderId . ' ');
+        
+        
+
+        $resultRedirect = $this->resultRedirectFactory->create();
+        $resultRedirect->setPath('sales/order/index');
+        return $resultRedirect;
     }
 
 }
